@@ -155,7 +155,16 @@ NSString *const kGREYXCTestCaseNotificationKey = @"GREYXCTestCaseNotificationKey
                          inFile:(NSString *)file
                     description:(NSString *)description {
   self.continueAfterFailure = NO;
-//  [self recordFailureWithDescription:description inFile:file atLine:line expected:NO];
+
+    NSInteger lineNumber = @(line).integerValue;
+    XCTSourceCodeLocation *location = [[XCTSourceCodeLocation alloc] initWithFilePath:file lineNumber:lineNumber];
+    XCTSourceCodeContext *sourceCodeContext = [[XCTSourceCodeContext alloc] initWithLocation:location];
+    
+    XCTMutableIssue *issue = [[XCTMutableIssue alloc] initWithType:XCTIssueTypeAssertionFailure compactDescription:description];
+    issue.sourceCodeContext = sourceCodeContext;
+
+    [self recordIssue: issue];
+
   // If the test fails outside of the main thread in a nested runloop it will not be interrupted
   // until it's back in the outer most runloop. Raise an exception to interrupt the test immediately
   [[GREYFrameworkException exceptionWithName:kInternalTestInterruptException
@@ -239,11 +248,19 @@ NSString *const kGREYXCTestCaseNotificationKey = @"GREYXCTestCaseNotificationKey
           break;
         case kGREYXCTestCaseStatusUnknown:
           self.continueAfterFailure = YES;
-//          [self recordFailureWithDescription:@"Test has finished with unknown status."
-//                                      inFile:@__FILE__
-//                                      atLine:__LINE__
-//                                    expected:NO];
-          break;
+
+        NSInteger lineNumber = @(__LINE__).integerValue;
+        XCTSourceCodeLocation *location = [[XCTSourceCodeLocation alloc] initWithFilePath:@__FILE__ lineNumber:lineNumber];
+        XCTSourceCodeContext *sourceCodeContext = [[XCTSourceCodeContext alloc] initWithLocation:location];
+              
+        XCTMutableIssue *issue = [[XCTMutableIssue alloc]
+            initWithType:XCTIssueTypeAssertionFailure
+            compactDescription:@"Test has finished with unknown status."];
+                            
+        issue.sourceCodeContext = sourceCodeContext;
+
+        [self recordIssue: issue];
+        break;
       }
       object_setClass(self.invocation, originalInvocationClass);
       [self grey_sendNotification:kGREYXCTestCaseInstanceDidFinish];
